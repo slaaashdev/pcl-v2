@@ -1,5 +1,6 @@
 import { db, CompressionPattern } from '../supabase'
 import { smartMissTracker } from '../smart-miss-tracker'
+import { extractCleanWords, reassembleText, CleanWord } from '../text-utils'
 import CryptoJS from 'crypto-js'
 
 // Types for compression processing
@@ -33,10 +34,12 @@ export interface PassResult {
 }
 
 export interface Token {
-  text: string
+  text: string              // Clean word for matching
+  original: string          // Original word with punctuation
   index: number
   processed: boolean
   originalIndex: number
+  cleanWord: CleanWord      // Full punctuation info
 }
 
 export class TwoPassCompressionEngine {
@@ -65,7 +68,7 @@ export class TwoPassCompressionEngine {
     await this.loadPatterns()
 
     // Step 3: Two-pass compression
-    const result = await this.performTwoPassCompression(text, startTime)
+    const result = await this.performTwoPassCompression(text, startTime, sessionId)
 
     // Step 4: Cache result for future use
     this.cacheHits.set(cacheKey, { ...result, fromCache: false })
@@ -94,22 +97,23 @@ export class TwoPassCompressionEngine {
   /**
    * Perform the two-pass compression algorithm with case-insensitive sliding window
    */
-  private async performTwoPassCompression(text: string, startTime: number): Promise<CompressionResult> {
+  private async performTwoPassCompression(text: string, startTime: number, sessionId?: string): Promise<CompressionResult> {
     // Store original text for case preservation
     const originalText = text
 
-    // Normalize input to lowercase for processing
-    const normalizedText = text.toLowerCase()
+    // Extract clean words with punctuation preservation
+    const cleanWords = extractCleanWords(text)
 
-    // Split into words only (no spaces/punctuation as separate tokens)
-    const words = normalizedText.trim().split(/\s+/).filter(word => word.length > 0)
+    console.log(`[${sessionId}] Extracted ${cleanWords.length} words with punctuation handling`)
 
-    // Create word-based tokens
-    const tokens: Token[] = words.map((word, index) => ({
-      text: word,
+    // Create word-based tokens with punctuation info
+    const tokens: Token[] = cleanWords.map((cleanWord, index) => ({
+      text: cleanWord.clean,           // Clean word for matching
+      original: cleanWord.original,    // Original with punctuation
       index,
       processed: false,
-      originalIndex: index
+      originalIndex: index,
+      cleanWord: cleanWord             // Full punctuation info
     }))
 
     const appliedRules: AppliedRule[] = []
@@ -341,11 +345,20 @@ export class TwoPassCompressionEngine {
   }
 
   /**
-   * Reassemble text from tokens with proper spacing
+   * Reassemble text from tokens with punctuation preservation
    */
   private reassembleText(tokens: Token[], originalText: string): string {
-    const processedTokens = tokens.filter(token => token.text.trim().length > 0)
-    return processedTokens.map(token => token.text).join(' ')
+    const result = tokens.map(token => {
+      // If the token was processed (compressed), use the compressed form
+      // Otherwise use the original clean word
+      const finalWord = token.text
+
+      // Reconstruct with original punctuation
+      const cleanWordInfo = token.cleanWord
+      return `${cleanWordInfo.leadingPunctuation}${finalWord}${cleanWordInfo.trailingPunctuation}`
+    }).filter(word => word.trim().length > 0)
+
+    return result.join(' ')
   }
 
   /**

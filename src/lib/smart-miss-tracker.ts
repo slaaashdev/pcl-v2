@@ -1,4 +1,5 @@
 import { db } from './supabase'
+import { getCleanWordForMatching } from './text-utils'
 
 /**
  * Smart Miss Tracker - Intelligent filtering for meaningful compression patterns
@@ -121,9 +122,9 @@ export class SmartMissTracker {
 
     const appliedTexts = new Set(appliedRules.map(rule => rule.originalText.toLowerCase()))
 
-    // Extract unprocessed tokens
+    // Extract unprocessed tokens and clean them for analysis
     const unprocessedTokens = tokens.filter(token => !token.processed && token.text.trim())
-    const words = unprocessedTokens.map(t => t.text.toLowerCase())
+    const words = unprocessedTokens.map(t => getCleanWordForMatching(t.text))
 
     // 1. SMART WORD TRACKING
     await this.trackSmartWords(words, appliedTexts, originalText, result)

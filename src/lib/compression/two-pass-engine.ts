@@ -118,7 +118,7 @@ export class TwoPassCompressionEngine {
 
     const appliedRules: AppliedRule[] = []
 
-    // Pass 1: Phrase compression (2-5 word patterns)
+    // Pass 1: Phrase compression (2-6 word patterns)
     const pass1Start = Date.now()
     const pass1Result = await this.performPhrasePass(tokens, appliedRules)
     const pass1Time = Date.now() - pass1Start
@@ -161,14 +161,14 @@ export class TwoPassCompressionEngine {
   }
 
   /**
-   * Pass 1: Phrase compression using 5→4→3→2→1 sliding window with case-insensitive matching
+   * Pass 1: Phrase compression using 6→5→4→3→2→1 sliding window with case-insensitive matching
    */
   private async performPhrasePass(tokens: Token[], appliedRules: AppliedRule[]): Promise<PassResult> {
     let tokensProcessed = 0
     let rulesApplied = 0
 
-    // Sliding window: check 5, 4, 3, 2, 1 word combinations (longest first)
-    for (let windowSize = 5; windowSize >= 1; windowSize--) {
+    // Sliding window: check 6, 5, 4, 3, 2, 1 word combinations (longest first)
+    for (let windowSize = 6; windowSize >= 1; windowSize--) {
       for (let i = 0; i <= tokens.length - windowSize; i++) {
         // Skip if any token in window is already processed
         if (tokens.slice(i, i + windowSize).some(token => token.processed)) {

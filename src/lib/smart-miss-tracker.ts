@@ -50,23 +50,37 @@ const HIGH_VALUE_PATTERNS = {
 
 // Phrase quality scoring
 const PHRASE_QUALITY_RULES = {
-  // High value 2-3 word phrases
+  // High value 2-6 word phrases (but stricter quality for longer phrases)
   isHighValuePhrase(phrase: string): boolean {
     const words = phrase.split(' ')
 
-    // Must be 2-3 words
-    if (words.length < 2 || words.length > 3) return false
+    // Must be 2-6 words
+    if (words.length < 2 || words.length > 6) return false
 
-    // Check for common valuable patterns
+    // Check for common valuable patterns (2-6 words)
     const commonPatterns = [
+      // 2-3 word patterns
       /right now/i, /good idea/i, /figure out/i, /find out/i, /check out/i,
       /let me know/i, /make sure/i, /as well/i, /at all/i, /of course/i,
       /by the way/i, /in order/i, /a lot/i, /kind of/i, /sort of/i,
       /as soon as/i, /as much as/i, /as long as/i, /such as/i,
       /thank you/i, /see you/i, /talk to/i, /going to/i, /want to/i,
-      /need to/i, /have to/i, /able to/i, /used to/i, /trying to/i
+      /need to/i, /have to/i, /able to/i, /used to/i, /trying to/i,
+
+      // 4-6 word patterns (longer phrases worth compressing)
+      /as soon as possible/i, /let me know if you/i, /make sure that you/i,
+      /in order to make sure/i, /as much as you can/i, /as long as you want/i,
+      /let me know when you are/i, /make sure everything is working/i,
+      /as soon as you can/i, /let me know what you think/i,
+      /make sure you have everything you need/i, /as long as it takes/i
     ]
 
+    // For longer phrases (4+ words), be more selective
+    if (words.length >= 4) {
+      return commonPatterns.some(pattern => pattern.test(phrase))
+    }
+
+    // For shorter phrases (2-3 words), more lenient
     return commonPatterns.some(pattern => pattern.test(phrase))
   },
 
@@ -77,8 +91,15 @@ const PHRASE_QUALITY_RULES = {
     // Skip if contains numbers or special characters
     if (/\d|[^\w\s]/g.test(phrase)) return true
 
-    // Skip if too long (4+ words are usually too specific)
-    if (words.length > 3) return true
+    // Skip if too long (7+ words are usually too specific)
+    if (words.length > 6) return true
+
+    // For longer phrases (4-6 words), apply stricter quality checks
+    if (words.length >= 4) {
+      // Must contain at least one non-common word for longer phrases
+      const hasValueWords = words.some(word => !SKIP_WORDS.has(word.toLowerCase()) && word.length > 3)
+      if (!hasValueWords) return true
+    }
 
     // Skip if all words are in skip list
     if (words.every(word => SKIP_WORDS.has(word.toLowerCase()))) return true
@@ -187,7 +208,7 @@ export class SmartMissTracker {
   }
 
   /**
-   * Track high-value 2-3 word phrases
+   * Track high-value 2-6 word phrases
    */
   private async trackSmartPhrases(
     words: string[],
@@ -195,17 +216,15 @@ export class SmartMissTracker {
     originalText: string,
     result: SmartMissResult
   ) {
-    // Generate 2-word and 3-word phrases
+    // Generate 2-word through 6-word phrases
     const phrases: string[] = []
 
-    // 2-word phrases
-    for (let i = 0; i < words.length - 1; i++) {
-      phrases.push(`${words[i]} ${words[i + 1]}`)
-    }
-
-    // 3-word phrases
-    for (let i = 0; i < words.length - 2; i++) {
-      phrases.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`)
+    // Generate phrases of different lengths (2-6 words)
+    for (let phraseLength = 2; phraseLength <= 6; phraseLength++) {
+      for (let i = 0; i <= words.length - phraseLength; i++) {
+        const phrase = words.slice(i, i + phraseLength).join(' ')
+        phrases.push(phrase)
+      }
     }
 
     const uniquePhrases = [...new Set(phrases)]

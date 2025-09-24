@@ -1,4 +1,5 @@
 import { db, CompressionPattern } from '../supabase'
+import { smartMissTracker } from '../smart-miss-tracker'
 import CryptoJS from 'crypto-js'
 
 // Types for compression processing
@@ -292,29 +293,31 @@ export class TwoPassCompressionEngine {
   }
 
   /**
-   * Track missed patterns for admin review
+   * Track missed patterns for admin review using smart filtering
    */
   private async trackMisses(originalText: string, tokens: Token[], appliedRules: AppliedRule[]) {
-    const appliedTexts = new Set(appliedRules.map(rule => rule.originalText.toLowerCase()))
+    try {
+      console.log(`🔍 Smart miss tracking for: "${originalText}"`)
 
-    // Find unprocessed words for miss tracking
-    const missedWords = tokens
-      .filter(token => !token.processed && token.text.trim() && /^\w+$/.test(token.text.trim()))
-      .map(token => token.text.trim().toLowerCase())
-      .filter(word => word.length > 2 && !appliedTexts.has(word))
+      // Use smart miss tracker with intelligent filtering
+      const result = await smartMissTracker.trackSmartMisses(
+        originalText,
+        tokens,
+        appliedRules
+      )
 
-    // Track unique missed words
-    const uniqueMissedWords = [...new Set(missedWords)]
+      console.log(`📊 Smart miss results: ${result.wordsLogged} words + ${result.phrasesLogged} phrases logged | ${result.wordsSkipped} words + ${result.phrasesSkipped} phrases skipped`)
 
-    for (const word of uniqueMissedWords) {
-      try {
-        await db.logMiss(word, 'word', [originalText])
-      } catch (error) {
-        console.error('Failed to log miss:', error)
+      // Log detailed results if any items were logged
+      if (result.loggedItems.length > 0) {
+        result.loggedItems.forEach(item => {
+          console.log(`  ✅ Logged ${item.type}: "${item.text}" (${item.reason})`)
+        })
       }
-    }
 
-    // TODO: Track missed phrases using sliding window analysis
+    } catch (error) {
+      console.error('❌ Smart miss tracking failed:', error)
+    }
   }
 
   /**

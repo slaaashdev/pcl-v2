@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCL Compressor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 400px;
+            min-height: 500px;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f9fafb;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .container {
+            padding: 16px;
+        }
+
+        .input-section {
+            margin-bottom: 16px;
+        }
+
+        .input-section label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            resize: none;
+            background: white;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 1px #3B82F6;
+        }
+
+        .char-count {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .button-section {
+            margin-bottom: 16px;
+        }
+
+        .compress-btn {
+            width: 100%;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .compress-btn:hover:not(:disabled) {
+            background: #2563EB;
+        }
+
+        .compress-btn:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #065f46;
+            font-size: 13px;
+        }
+
+        .copy-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .compressed-text {
+            background: #f0fdf4;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 6px;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+
+        .stat-value {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1f2937;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feedback-section {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .feedback-btn {
+            flex: 1;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .feedback-btn.positive {
+            background: #10b981;
+            color: white;
+        }
+
+        .feedback-btn.positive:hover {
+            background: #059669;
+        }
+
+        .feedback-btn.negative {
+            background: #ef4444;
+            color: white;
+        }
+
+        .feedback-btn.negative:hover {
+            background: #dc2626;
+        }
+
+        .feedback-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-section {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .error-section.show {
+            display: block;
+        }
+
+        .error-text {
+            color: #b91c1c;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .footer {
+            border-top: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            background: white;
+            font-size: 11px;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .quick-btn {
+            flex: 1;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            background: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 PCL Compressor</h1>
+        <p>Two-pass text compression</p>
+    </div>
+
+    <div class="container">
+        <div class="input-section">
+            <label for="inputText">Enter text to compress:</label>
+            <textarea
+                id="inputText"
+                class="textarea"
+                placeholder="Type or paste your text here..."
+                maxlength="2000"
+            ></textarea>
+            <div class="char-count">
+                <span id="charCount">0</span> / 2000 characters
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <button class="quick-btn" onclick="loadSample()">📝 Sample</button>
+            <button class="quick-btn" onclick="pasteFromClipboard()">📋 Paste</button>
+            <button class="quick-btn" onclick="clearText()">🗑️ Clear</button>
+        </div>
+
+        <div class="button-section">
+            <button id="compressBtn" class="compress-btn">
+                <span id="btnText">Compress Text</span>
+                <div id="btnSpinner" class="spinner" style="display: none;"></div>
+            </button>
+        </div>
+
+        <div id="errorSection" class="error-section">
+            <div id="errorText" class="error-text"></div>
+        </div>
+
+        <div id="resultSection" class="result-section">
+            <div class="result-header">
+                <span class="result-title">✨ Compressed Result</span>
+                <button id="copyBtn" class="copy-btn">Copy</button>
+            </div>
+
+            <div id="compressedText" class="compressed-text"></div>
+
+            <div class="stats-grid">
+                <div class="stat">
+                    <span id="compressionRatio" class="stat-value">0%</span>
+                    <span class="stat-label">Saved</span>
+                </div>
+                <div class="stat">
+                    <span id="processingTime" class="stat-value">0ms</span>
+                    <span class="stat-label">Time</span>
+                </div>
+                <div class="stat">
+                    <span id="rulesApplied" class="stat-value">0</span>
+                    <span class="stat-label">Rules</span>
+                </div>
+            </div>
+
+            <div id="feedbackSection" class="feedback-section">
+                <button id="positiveBtn" class="feedback-btn positive">👍 Good</button>
+                <button id="negativeBtn" class="feedback-btn negative">👎 Bad</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        PCL v1.0 • Manual curation • Zero API costs
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCL Extension Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-text {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: text;
+        }
+        .instructions {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        h1 { color: #1f2937; }
+        h2 { color: #374151; }
+        .success { color: #059669; }
+        .error { color: #dc2626; }
+    </style>
+</head>
+<body>
+    <h1>🔧 PCL Chrome Extension Test Page</h1>
+
+    <div class="instructions">
+        <h3>📋 Testing Instructions</h3>
+        <ol>
+            <li>Install the PCL Chrome extension</li>
+            <li>Ensure your PCL web app is running at <code>http://localhost:3000</code></li>
+            <li>Test each section below by selecting text and using the extension</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>1. Basic Compression Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select the text below and click the PCL compress button that appears.
+        </p>
+        <div class="test-text">
+            Can you help me summarize this document please
+        </div>
+        <p><strong>Expected Result:</strong> <span class="highlight">"Can u help me sum this doc pls"</span></p>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Phrase Compression Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select the text below to test phrase-level compression.
+        </p>
+        <div class="test-text">
+            Thank you for your information, by the way this is as soon as possible
+        </div>
+        <p><strong>Expected Result:</strong> Should compress phrases like "thank you" → "thx", "by the way" → "btw", "as soon as possible" → "asap"</p>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Word Compression Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select individual words or this sentence to test word-level compression.
+        </p>
+        <div class="test-text">
+            Please help me understand the technology behind this application development
+        </div>
+        <p><strong>Expected Result:</strong> Words like "please" → "pls", "technology" → "tech", "application" → "app", "development" → "dev"</p>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Context Menu Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select any text below, then right-click and choose "Compress with PCL" from the context menu.
+        </p>
+        <div class="test-text">
+            This is a test for the context menu functionality because we want to make sure everything works through different interaction methods
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Unknown Words Test (Miss Tracking)</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select the text below to test miss tracking for uncached patterns.
+        </p>
+        <div class="test-text">
+            blockchain cryptocurrency metaverse artificial intelligence machine learning
+        </div>
+        <p><strong>Expected Result:</strong> These words should be logged as misses in the admin dashboard for manual review.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Feedback System Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> After any compression, test the feedback buttons (👍/👎) in the tooltip.
+        </p>
+        <div class="test-text">
+            You are amazing and please help me with this document
+        </div>
+        <p><strong>Expected Result:</strong> Feedback should be recorded and confidence scores adjusted accordingly.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>7. Extension Popup Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Click the PCL extension icon in your Chrome toolbar to open the popup interface.
+        </p>
+        <ol>
+            <li>Copy any text from this page</li>
+            <li>Paste it into the popup interface</li>
+            <li>Click "Compress Text"</li>
+            <li>Verify compression works</li>
+            <li>Test the copy button</li>
+            <li>Test the feedback buttons</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>8. Performance Test</h2>
+        <p class="instructions">
+            <strong>Action:</strong> Select and compress the text below multiple times to test caching.
+        </p>
+        <div class="test-text">
+            Can you help me summarize this document please because I need information about technology
+        </div>
+        <p><strong>Expected Results:</strong></p>
+        <ul>
+            <li>First compression: 70-250ms (two-pass processing)</li>
+            <li>Subsequent compressions: 5-15ms (cache hit)</li>
+            <li>Tooltip shows processing time</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Verification Checklist</h2>
+        <p>After testing, verify these features work:</p>
+        <ul>
+            <li>☐ Text selection shows PCL compress button</li>
+            <li>☐ Compress button triggers compression</li>
+            <li>☐ Tooltip appears with results</li>
+            <li>☐ Copy button works in tooltip</li>
+            <li>☐ Feedback buttons work (👍/👎)</li>
+            <li>☐ Context menu has "Compress with PCL" option</li>
+            <li>☐ Extension popup opens and functions</li>
+            <li>☐ Processing times are reasonable</li>
+            <li>☐ No console errors in browser DevTools</li>
+            <li>☐ Admin dashboard shows compression activity</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Common Issues & Solutions</h2>
+        <div style="background: #fee2e2; padding: 15px; border-radius: 6px; margin: 10px 0;">
+            <h4 class="error">Issue: "Unable to connect to PCL server"</h4>
+            <p><strong>Solution:</strong> Ensure your Next.js app is running at <code>http://localhost:3000</code></p>
+        </div>
+
+        <div style="background: #fee2e2; padding: 15px; border-radius: 6px; margin: 10px 0;">
+            <h4 class="error">Issue: No compress button appears when selecting text</h4>
+            <p><strong>Solutions:</strong></p>
+            <ul>
+                <li>Check browser console for JavaScript errors</li>
+                <li>Reload the webpage</li>
+                <li>Ensure extension is enabled in chrome://extensions</li>
+            </ul>
+        </div>
+
+        <div style="background: #dcfce7; padding: 15px; border-radius: 6px; margin: 10px 0;">
+            <h4 class="success">Success: Everything works!</h4>
+            <p>If all tests pass, your PCL Chrome extension is ready for daily use! 🎉</p>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive elements for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            const testTexts = document.querySelectorAll('.test-text');
+            testTexts.forEach(text => {
+                text.addEventListener('click', function() {
+                    // Select the text when clicked
+                    const range = document.createRange();
+                    range.selectNodeContents(this);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

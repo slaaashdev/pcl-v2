@@ -1,6 +1,7 @@
 import { db, CompressionPattern } from '../supabase'
 import { smartMissTracker } from '../smart-miss-tracker'
 import { extractCleanWords, reassembleText, CleanWord } from '../text-utils'
+import { questionPrefixProcessor, Pass0Result } from './pass-zero'
 import CryptoJS from 'crypto-js'
 
 // Types for compression processing
@@ -12,9 +13,11 @@ export interface CompressionResult {
   rulesApplied: AppliedRule[]
   fromCache: boolean
   passResults: {
+    pass0: PassResult
     pass1: PassResult
     pass2: PassResult
   }
+  pass0Result?: Pass0Result
 }
 
 export interface AppliedRule {
@@ -42,7 +45,8 @@ export interface Token {
   cleanWord: CleanWord      // Full punctuation info
 }
 
-export class TwoPassCompressionEngine {
+export class ThreePassCompressionEngine {
+  private pass0Patterns: CompressionPattern[] = []
   private phrasePatterns: CompressionPattern[] = []
   private wordPatterns: CompressionPattern[] = []
   private cacheHits = new Map<string, CompressionResult>()
@@ -67,8 +71,8 @@ export class TwoPassCompressionEngine {
     // Step 2: Load patterns from database
     await this.loadPatterns()
 
-    // Step 3: Two-pass compression
-    const result = await this.performTwoPassCompression(text, startTime, sessionId)
+    // Step 3: Three-pass compression
+    const result = await this.performThreePassCompression(text, startTime, sessionId)
 
     // Step 4: Cache result for future use
     this.cacheHits.set(cacheKey, { ...result, fromCache: false })
@@ -81,13 +85,16 @@ export class TwoPassCompressionEngine {
    */
   private async loadPatterns() {
     try {
+      // Load Pass 0 patterns (priority 0)
+      this.pass0Patterns = await db.getPatternsByPriority(0, 0.70)
+
       // Load phrase patterns (Pass 1, priority 1)
       this.phrasePatterns = await db.getPatternsByPriority(1, 0.70)
 
       // Load word patterns (Pass 2, priority 2)
       this.wordPatterns = await db.getPatternsByPriority(2, 0.70)
 
-      console.log(`Loaded ${this.phrasePatterns.length} phrase patterns, ${this.wordPatterns.length} word patterns`)
+      console.log(`Loaded ${this.pass0Patterns.length} Pass 0 patterns, ${this.phrasePatterns.length} phrase patterns, ${this.wordPatterns.length} word patterns`)
     } catch (error) {
       console.error('Failed to load patterns:', error)
       throw new Error('Database connection failed')
@@ -95,14 +102,23 @@ export class TwoPassCompressionEngine {
   }
 
   /**
-   * Perform the two-pass compression algorithm with case-insensitive sliding window
+   * Perform the three-pass compression algorithm with Pass 0 prefix removal
    */
-  private async performTwoPassCompression(text: string, startTime: number, sessionId?: string): Promise<CompressionResult> {
+  private async performThreePassCompression(text: string, startTime: number, sessionId?: string): Promise<CompressionResult> {
     // Store original text for case preservation
     const originalText = text
 
-    // Extract clean words with punctuation preservation
-    const cleanWords = extractCleanWords(text)
+    // Pass 0: Question prefix removal
+    const pass0Start = Date.now()
+    const pass0Result = questionPrefixProcessor.processText(text)
+    const pass0Time = Date.now() - pass0Start
+
+    // Use Pass 0 processed text for subsequent passes
+    const textAfterPass0 = pass0Result.processed
+    console.log(`[${sessionId}] Pass 0: "${text}" → "${textAfterPass0}" (${pass0Result.compressionRatio}% compression)`)
+
+    // Extract clean words with punctuation preservation from Pass 0 result
+    const cleanWords = extractCleanWords(textAfterPass0)
 
     console.log(`[${sessionId}] Extracted ${cleanWords.length} words with punctuation handling`)
 
@@ -118,6 +134,19 @@ export class TwoPassCompressionEngine {
 
     const appliedRules: AppliedRule[] = []
 
+    // Add Pass 0 rule if prefix was removed
+    if (pass0Result.prefixRemoved) {
+      appliedRules.push({
+        id: 'pass0-prefix-removal',
+        originalText: pass0Result.prefixRemoved,
+        compressedForm: pass0Result.questionMarkAdded ? '?' : '',
+        pass: 0,
+        confidence: 0.95,
+        startIndex: 0,
+        endIndex: 0
+      })
+    }
+
     // Pass 1: Phrase compression (2-6 word patterns)
     const pass1Start = Date.now()
     const pass1Result = await this.performPhrasePass(tokens, appliedRules)
@@ -129,23 +158,28 @@ export class TwoPassCompressionEngine {
     const pass2Time = Date.now() - pass2Start
 
     // Reassemble the text with proper spacing
-    const compressed = this.reassembleText(tokens, originalText)
-    const compressionRatio = this.calculateCompressionRatio(text, compressed)
+    const compressed = this.reassembleText(tokens, textAfterPass0)
+    const compressionRatio = this.calculateCompressionRatio(originalText, compressed)
 
     // Track misses for patterns not found
-    await this.trackMisses(text, tokens, appliedRules)
+    await this.trackMisses(originalText, tokens, appliedRules)
 
     // Update usage counts for applied rules
     await this.updateUsageCounts(appliedRules)
 
     return {
-      original: text,
+      original: originalText,
       compressed,
       compressionRatio,
       processingTime: Date.now() - startTime,
       rulesApplied: appliedRules,
       fromCache: false,
       passResults: {
+        pass0: {
+          tokensProcessed: pass0Result.prefixRemoved ? 1 : 0,
+          rulesApplied: pass0Result.prefixRemoved ? 1 : 0,
+          processingTime: pass0Time
+        },
         pass1: {
           tokensProcessed: pass1Result.tokensProcessed,
           rulesApplied: pass1Result.rulesApplied,
@@ -156,7 +190,8 @@ export class TwoPassCompressionEngine {
           rulesApplied: pass2Result.rulesApplied,
           processingTime: pass2Time
         }
-      }
+      },
+      pass0Result
     }
   }
 
@@ -388,4 +423,4 @@ export class TwoPassCompressionEngine {
 }
 
 // Export singleton instance
-export const compressionEngine = new TwoPassCompressionEngine()
+export const compressionEngine = new ThreePassCompressionEngine()

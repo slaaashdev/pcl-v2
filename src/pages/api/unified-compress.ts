@@ -1,6 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { compressionEngine, CompressionResult } from '@/lib/compression/two-pass-engine'
-import { missTracker } from '@/lib/miss-tracking'
+
+// Rate limiting storage (in-memory - use Redis in production)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+// Rate limit configurations
+const RATE_LIMITS = {
+  FREE_TIER: { requests: 10, windowMs: 60 * 1000 }, // 10 requests per minute
+  PREMIUM: { requests: 100, windowMs: 60 * 1000 }   // 100 requests per minute
+}
 
 export interface CompressionApiRequest {
   text: string
@@ -28,6 +36,48 @@ export interface CompressionApiResponse {
   timestamp: string
 }
 
+/**
+ * Validate API key against environment variable
+ */
+function validateApiKey(apiKey: string | undefined): boolean {
+  if (!apiKey) return false
+  return apiKey === process.env.API_SECRET_KEY
+}
+
+/**
+ * Check and update rate limits for an IP address
+ */
+function checkRateLimit(ip: string, isPremium: boolean): { allowed: boolean; resetTime: number; remaining: number } {
+  const now = Date.now()
+  const config = isPremium ? RATE_LIMITS.PREMIUM : RATE_LIMITS.FREE_TIER
+
+  // Clean up expired entries
+  rateLimitMap.forEach((value, key) => {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key)
+    }
+  })
+
+  const existing = rateLimitMap.get(ip)
+
+  if (!existing || now > existing.resetTime) {
+    // First request in window or window has expired
+    const resetTime = now + config.windowMs
+    rateLimitMap.set(ip, { count: 1, resetTime })
+    return { allowed: true, resetTime, remaining: config.requests - 1 }
+  }
+
+  if (existing.count >= config.requests) {
+    // Rate limit exceeded
+    return { allowed: false, resetTime: existing.resetTime, remaining: 0 }
+  }
+
+  // Increment count
+  existing.count++
+  rateLimitMap.set(ip, existing)
+  return { allowed: true, resetTime: existing.resetTime, remaining: config.requests - existing.count }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CompressionApiResponse>
@@ -35,7 +85,7 @@ export default async function handler(
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key')
 
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -53,11 +103,48 @@ export default async function handler(
     return
   }
 
-  const startTime = Date.now()
+
+  // Get API key and client IP for security checks
+  const apiKey = req.headers['x-api-key'] as string | undefined
+  const clientIP = getClientIP(req)
+
+  // 1. API Key Validation
+  let isPremium = false
+  if (apiKey) {
+    if (!validateApiKey(apiKey)) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid API key. Please check your authentication credentials.',
+        timestamp: new Date().toISOString()
+      })
+      return
+    }
+    isPremium = true
+    console.log(`[PREMIUM] API key validated for IP: ${clientIP}`)
+  } else {
+    console.log(`[FREE] Request from IP: ${clientIP}`)
+  }
+
+  // 2. Rate Limiting
+  const rateLimitResult = checkRateLimit(clientIP, isPremium)
+
+  // Add rate limit headers
+  res.setHeader('X-RateLimit-Limit', isPremium ? RATE_LIMITS.PREMIUM.requests : RATE_LIMITS.FREE_TIER.requests)
+  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining)
+  res.setHeader('X-RateLimit-Reset', Math.ceil(rateLimitResult.resetTime / 1000))
+
+  if (!rateLimitResult.allowed) {
+    res.status(429).json({
+      success: false,
+      error: `Rate limit exceeded. ${isPremium ? 'Premium' : 'Free'} tier allows ${isPremium ? RATE_LIMITS.PREMIUM.requests : RATE_LIMITS.FREE_TIER.requests} requests per minute. Try again in ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
+      timestamp: new Date().toISOString()
+    })
+    return
+  }
 
   try {
     // Validate request body
-    const { text, sessionId, options }: CompressionApiRequest = req.body
+    const { text, sessionId }: CompressionApiRequest = req.body
 
     if (!text || typeof text !== 'string') {
       res.status(400).json({
@@ -166,7 +253,7 @@ async function estimateMissesLogged(originalText: string, rulesApplied: any[]): 
 
     rulesApplied.forEach(rule => {
       const ruleWords = rule.originalText.split(/\s+/)
-      ruleWords.forEach(word => coveredWords.add(word.toLowerCase()))
+      ruleWords.forEach((word: string) => coveredWords.add(word.toLowerCase()))
     })
 
     const uncoveredWords = words.filter(word =>

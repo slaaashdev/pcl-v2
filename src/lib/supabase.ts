@@ -73,6 +73,7 @@ export interface UserFeedback {
 
 // Helper functions for database operations
 export const db = {
+  supabase,
   // Compression patterns
   async getPatternsByPriority(priority: number, minConfidence: number = 0.70) {
     console.log(`🔍 Querying compressions table for priority=${priority}, minConfidence=${minConfidence}`)

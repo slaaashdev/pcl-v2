@@ -11,7 +11,7 @@
   ],
 
   "host_permissions": [
-    "http://localhost:3000/*",
+    "https://pcl-v2-hv2zqarnx-damians-projects-564804fc.vercel.app/*",
     "https://*.vercel.app/*"
   ],
 

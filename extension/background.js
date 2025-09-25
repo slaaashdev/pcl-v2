@@ -2,7 +2,7 @@
 console.log('PCL Compressor background service worker loaded')
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:3001' // Change to your deployed URL
+const API_BASE_URL = 'https://pcl-v2-hv2zqarnx-damians-projects-564804fc.vercel.app' // Vercel deployed URL
 
 // Install event
 chrome.runtime.onInstalled.addListener(() => {

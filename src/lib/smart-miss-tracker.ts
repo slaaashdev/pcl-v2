@@ -167,7 +167,7 @@ export class SmartMissTracker {
     originalText: string,
     result: SmartMissResult
   ) {
-    const uniqueWords = [...new Set(words)]
+    const uniqueWords = Array.from(new Set(words))
 
     for (const word of uniqueWords) {
       // Skip if already compressed
@@ -227,7 +227,7 @@ export class SmartMissTracker {
       }
     }
 
-    const uniquePhrases = [...new Set(phrases)]
+    const uniquePhrases = Array.from(new Set(phrases))
 
     for (const phrase of uniquePhrases) {
       // Skip if already compressed

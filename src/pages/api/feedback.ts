@@ -107,12 +107,19 @@ export default async function handler(
 
     console.log(`[${sessionId || 'unknown'}] Processing ${satisfied ? 'positive' : 'negative'} feedback for ${rulesApplied.length} rules`)
 
+    // Transform rules to add required startIndex/endIndex properties for AppliedRule interface
+    const completeRulesApplied = rulesApplied.map(rule => ({
+      ...rule,
+      startIndex: 0,
+      endIndex: 0
+    }))
+
     // Process feedback and update confidence scores
     const adjustments = await confidenceSystem.processFeedback(
       satisfied,
       originalText,
       compressedText,
-      rulesApplied,
+      completeRulesApplied,
       sessionId,
       compressionRatio,
       processingTime

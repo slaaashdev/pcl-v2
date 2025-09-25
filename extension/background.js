@@ -2,7 +2,10 @@
 console.log('PCL Compressor background service worker loaded')
 
 // API Configuration
-const API_BASE_URL = 'https://pcl-v2-hv2zqarnx-damians-projects-564804fc.vercel.app' // Vercel deployed URL
+const CONFIG = {
+  API_ENDPOINT: 'https://pcl-v2-hv2zqarnx-damians-projects-564804fc.vercel.app',
+  API_KEY: 'w\'8V7V)_RX}TXLa'
+}
 
 // Install event
 chrome.runtime.onInstalled.addListener(() => {
@@ -78,10 +81,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function compressText(text) {
   const sessionId = await getSessionId()
 
-  const response = await fetch(`${API_BASE_URL}/api/unified-compress`, {
+  const response = await fetch(`${CONFIG.API_ENDPOINT}/api/unified-compress`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-API-Key': CONFIG.API_KEY
     },
     body: JSON.stringify({
       text: text,
@@ -104,10 +108,11 @@ async function compressText(text) {
 
 // Feedback submission function
 async function submitFeedback(feedbackData) {
-  const response = await fetch(`${API_BASE_URL}/api/feedback`, {
+  const response = await fetch(`${CONFIG.API_ENDPOINT}/api/feedback`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-API-Key': CONFIG.API_KEY
     },
     body: JSON.stringify(feedbackData)
   })

@@ -85,7 +85,7 @@ async function compressText(text) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': CONFIG.API_KEY
+      'x-api-key': CONFIG.API_KEY
     },
     body: JSON.stringify({
       text: text,
@@ -112,7 +112,7 @@ async function submitFeedback(feedbackData) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': CONFIG.API_KEY
+      'x-api-key': CONFIG.API_KEY
     },
     body: JSON.stringify(feedbackData)
   })

@@ -266,7 +266,7 @@ export class ThreePassCompressionEngine {
           originalText: pattern.original_text,
           compressedForm: pattern.compressed_form,
           pass: 2,
-          confidence: pattern.confidence_score,
+          confidence: pattern.confidence_score ?? 0.7,
           startIndex: i,
           endIndex: i
         })
@@ -307,11 +307,11 @@ export class ThreePassCompressionEngine {
     }
 
     appliedRules.push({
-      id: pattern.id,
+      id: pattern.text_hash,
       originalText: pattern.original_text,
       compressedForm: pattern.compressed_form,
       pass: 1,
-      confidence: pattern.confidence_score,
+      confidence: pattern.confidence_score ?? 0.7,
       startIndex,
       endIndex: startIndex + windowSize - 1
     })

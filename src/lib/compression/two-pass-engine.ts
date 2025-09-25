@@ -262,7 +262,7 @@ export class ThreePassCompressionEngine {
         token.processed = true
 
         appliedRules.push({
-          id: pattern.id,
+          id: pattern.pattern_id || pattern.original_text,
           originalText: pattern.original_text,
           compressedForm: pattern.compressed_form,
           pass: 2,
